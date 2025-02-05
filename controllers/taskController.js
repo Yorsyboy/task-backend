@@ -17,6 +17,64 @@ export const getAllTasks = asyncHandler(async (req, res) => {
 // @route: GET /api/tasks/id
 // @access: Private
 export const getAllTasksByUser = asyncHandler(async (req, res) => {
+    const userId = req.params.id;
+
+    if (!userId) {
+        res.status(400);
+        throw new Error("User ID is required");
+    }
+
+    const tasks = await Task.find({ user: userId });
+
+    if (!tasks) {
+        res.status(404);
+        throw new Error("No tasks found");
+    }
+
+    res.status(200).json(tasks);
+});
+
+
+
+// @desc Create a task
+// @route: Post /api/tasks/new
+export const createTask = asyncHandler(async (req, res) => {
+    const { description } = req.body;
+
+    if (!description) {
+        res.status(400);
+        throw new Error("Please fill in all fields");
+    }
+
+    // Ensure the authenticated user's ID is included in the request
+    if (!req.user || !req.user._id) {
+        res.status(401);
+        throw new Error("User not authenticated");
+    }
+
+    // Automatically get the department from the authenticated user
+    const department = req.user.department;
+
+    if (!department) {
+        res.status(400);
+        throw new Error("User department is missing");
+    }
+
+    const task = await Task.create({
+        description,
+        department,
+        createdBy: req.user._id,  // ✅ Use _id instead of name
+        user: req.user._id,       // ✅ This field is redundant, consider removing
+        userRole: req.user.role,
+    });
+
+    res.status(200).json(task);
+});
+
+
+// @desc Update a task
+// @route: PUT /api/tasks/:id
+export const updateTask = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { status, approvedBy } = req.body;
 
