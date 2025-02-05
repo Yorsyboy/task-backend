@@ -76,7 +76,7 @@ export const createTask = asyncHandler(async (req, res) => {
 // @route: PUT /api/tasks/:id
 export const updateTask = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { status, approvedBy } = req.body;
+    const { status, userRole } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({ message: "Invalid Task ID" });
@@ -98,15 +98,15 @@ export const updateTask = asyncHandler(async (req, res) => {
     }
 
     // Ensure only a supervisor can approve the task
-    if (status === "approved") {
+    if (!userRole === "supervisor" && !status === "waiting for approval") {
         if (!approvedBy) {
             return res.status(400).json({ message: "Supervisor ID is required for approval" });
         }
 
-        const supervisor = await User.findById(approvedBy);
-        if (!supervisor || supervisor.role !== "supervisor") {
-            return res.status(403).json({ message: "Only a supervisor can approve this task" });
-        }
+        // const supervisor = await User.findById(approvedBy);
+        // if (!supervisor || supervisor.role !== "supervisor") {
+        //     return res.status(403).json({ message: "Only a supervisor can approve this task" });
+        // }
 
         task.status = "approved";
         task.approvedBy = approvedBy;
