@@ -4,11 +4,11 @@ const taskSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        ref: 'User',
+        ref: "User",
     },
     userRole: {
         type: String,
-        enum: ['supervisor', 'user'], 
+        enum: ["supervisor", "user"],
         required: true,
     },
     description: {
@@ -17,8 +17,8 @@ const taskSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'waiting for approval', 'approved', 'completed'],
-        default: 'pending',
+        enum: ["pending", "waiting for approval", "approved", "completed"],
+        default: "pending",
         required: true,
     },
     department: {
@@ -31,22 +31,34 @@ const taskSchema = new mongoose.Schema({
     },
     approvedBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: "User",
     },
 });
 
 // Automatically set userRole before saving the task
-taskSchema.pre('save', async function (next) {
-    if (!this.isModified('createdBy')) return next();
+taskSchema.pre("save", async function (next) {
+    if (!this.isModified("createdBy")) return next();
 
-    const user = await mongoose.model('User').findById(this.createdBy);
+    const user = await mongoose.model("User").findById(this.createdBy);
     if (user) {
         this.userRole = user.role;
     } else {
         return next(new Error("User not found"));
     }
-    
+
     next();
 });
 
-export default mongoose.model('Task', taskSchema);
+// Ensure `approvedBy` returns the full user name
+taskSchema.set("toObject", { virtuals: true });
+taskSchema.set("toJSON", { virtuals: true });
+
+taskSchema.virtual("approvedByName", {
+    ref: "User",
+    localField: "approvedBy",
+    foreignField: "_id",
+    justOne: true,
+    options: { select: "name" },
+});
+
+export default mongoose.model("Task", taskSchema);
