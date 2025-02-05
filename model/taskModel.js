@@ -8,8 +8,8 @@ const taskSchema = new mongoose.Schema({
     },
     userRole: {
         type: String,
+        enum: ['supervisor', 'user'], 
         required: true,
-        enum: ['supervisor', 'user'], // Match roles in User model
     },
     description: {
         type: String,
@@ -33,6 +33,20 @@ const taskSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
     },
+});
+
+// Automatically set userRole before saving the task
+taskSchema.pre('save', async function (next) {
+    if (!this.isModified('createdBy')) return next();
+
+    const user = await mongoose.model('User').findById(this.createdBy);
+    if (user) {
+        this.userRole = user.role;
+    } else {
+        return next(new Error("User not found"));
+    }
+    
+    next();
 });
 
 export default mongoose.model('Task', taskSchema);
