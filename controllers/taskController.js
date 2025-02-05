@@ -7,7 +7,7 @@ import User from '../model/userModel.js'
 // @route: GET /api/tasks
 export const getAllTasks = asyncHandler(async (req, res) => {
 
-    const tasks = await Task.find({})
+    const tasks = await Task.find({}).populate("approvedBy", "name")
 
     res.status(200).json(tasks);
 })
@@ -24,7 +24,7 @@ export const getAllTasksByUser = asyncHandler(async (req, res) => {
         throw new Error("User ID is required");
     }
 
-    const tasks = await Task.find({ user: userId });
+    const tasks = await Task.find({ user: userId }).populate("approvedBy", "name");
 
     if (!tasks) {
         res.status(404);
