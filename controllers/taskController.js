@@ -17,118 +17,50 @@ export const getAllTasks = asyncHandler(async (req, res) => {
 // @route: GET /api/tasks/id
 // @access: Private
 export const getAllTasksByUser = asyncHandler(async (req, res) => {
-    const userId = req.params.id;
+    const { id } = req.params;
+    const { status, approvedBy } = req.body;
 
-    if (!userId) {
-        res.status(400);
-        throw new Error("User ID is required");
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: "Invalid Task ID" });
     }
 
-    const tasks = await Task.find({ user: userId });
-
-    if (!tasks) {
-        res.status(404);
-        throw new Error("No tasks found");
-    }
-
-    res.status(200).json(tasks);
-});
-
-
-
-// @desc Create a task
-// @route: Post /api/tasks/new
-export const createTask = asyncHandler(async (req, res) => {
-    const { description } = req.body;
-
-    if (!description) {
-        res.status(400);
-        throw new Error("Please fill in all fields");
-    }
-
-    // Ensure the authenticated user's ID is included in the request
-    if (!req.user || !req.user._id) {
-        res.status(401);
-        throw new Error("User not authenticated");
-    }
-
-    // Automatically get the department from the authenticated user
-    const department = req.user.department;
-
-    if (!department) {
-        res.status(400);
-        throw new Error("User department is missing");
-    }
-
-    const task = await Task.create({
-        description,
-        department,
-        createdBy: req.user._id,  // ✅ Use _id instead of name
-        user: req.user._id,       // ✅ This field is redundant, consider removing
-        userRole: req.user.role,
-    });
-
-    res.status(200).json(task);
-});
-
-
-// @desc Update a task
-// @route: PUT /api/tasks/:id
-export const updateTask = asyncHandler(async (req, res) => {
-    console.log("Request Params:", req.params);
-    console.log("Request Body:", req.body);
-
-    if (!req.params.id) {
-        return res.status(400).json({ message: "Task ID is required" });
-    }
-
-    if (req.body.status === "pending" && !req.body.createdBy) {
-        return res.status(400).json({ message: "CreatedBy field is required when status is pending" });
-    }
-
-    // Validate createdBy as an ObjectId
-    if (req.body.status === "pending" && !mongoose.Types.ObjectId.isValid(req.body.createdBy)) {
-        return res.status(400).json({ message: "Invalid User ID format" });
-    }
-
-    const task = await Task.findById(req.params.id);
+    const task = await Task.findById(id);
     if (!task) {
         return res.status(404).json({ message: "Task not found" });
     }
 
-    const user = await User.findById(req.body.createdBy);
-    if (req.body.status === "pending" && !user) {
-        return res.status(404).json({ message: "User not found" });
-    }
+    const user = req.user; // Authenticated user
 
-    // Allow the task creator to update the status to "waiting for approval"
-    if (req.body.status === "waiting for approval") {
-        if (task.createdBy.toString() !== req.body.createdBy.toString()) {
+    // Ensure only the task creator can request approval
+    if (status === "waiting for approval") {
+        if (task.createdBy.toString() !== user._id.toString()) {
             return res.status(403).json({ message: "Only the task creator can request approval" });
         }
         task.status = "waiting for approval";
     }
 
-    // Only a supervisor can approve the task
-    const supervisor = await User.findById(req.body.role);
-    if (!supervisor || supervisor.role !== "supervisor") {
-        return res.status(403).json({ message: "Only a supervisor can approve this task 1" });
-    }
-    else if (req.body.status === "approved") {
-        if (user.role !== "supervisor") {
+    // Ensure only a supervisor can approve the task
+    if (status === "approved") {
+        if (!approvedBy) {
+            return res.status(400).json({ message: "Supervisor ID is required for approval" });
+        }
+
+        const supervisor = await User.findById(approvedBy);
+        if (!supervisor || supervisor.role !== "supervisor") {
             return res.status(403).json({ message: "Only a supervisor can approve this task" });
         }
+
         task.status = "approved";
+        task.approvedBy = approvedBy;
     }
 
-    // Invalid status update
-    else {
+    // Invalid status update attempt
+    if (!["pending", "waiting for approval", "approved", "completed"].includes(status)) {
         return res.status(400).json({ message: "Invalid status update" });
     }
 
-    const updatedTask = await task.save(); // Use `.save()` instead of `findByIdAndUpdate`
-
-    res.status(200).json(updatedTask);
+    await task.save();
+    res.status(200).json(task);
 });
 
 
