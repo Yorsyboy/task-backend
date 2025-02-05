@@ -6,13 +6,18 @@ const taskSchema = new mongoose.Schema({
         required: true,
         ref: 'User',
     },
+    userRole: {
+        type: String,
+        required: true,
+        enum: ['supervisor', 'user'], // Match roles in User model
+    },
     description: {
         type: String,
         required: true,
     },
     status: {
         type: String,
-        enum: ['pending', 'waiting for approval', 'approved', 'completed'], // ✅ Added 'approved' for clarity
+        enum: ['pending', 'waiting for approval', 'approved', 'completed'],
         default: 'pending',
         required: true,
     },

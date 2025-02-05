@@ -65,6 +65,7 @@ export const createTask = asyncHandler(async (req, res) => {
         department,
         createdBy: req.user._id,  // ✅ Use _id instead of name
         user: req.user._id,       // ✅ This field is redundant, consider removing
+        userRole: req.user.role,
     });
 
     res.status(200).json(task);
