@@ -76,7 +76,7 @@ export const createTask = asyncHandler(async (req, res) => {
 // @route: PUT /api/tasks/:id
 export const updateTask = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { status, userRole } = req.body;
+    const { status } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({ message: "Invalid Task ID" });
@@ -89,7 +89,6 @@ export const updateTask = asyncHandler(async (req, res) => {
 
     const user = req.user; // Authenticated user
 
-    // Ensure only the task creator can request approval
     if (status === "waiting for approval") {
         if (task.createdBy.toString() !== user._id.toString()) {
             return res.status(403).json({ message: "Only the task creator can request approval" });
@@ -97,22 +96,15 @@ export const updateTask = asyncHandler(async (req, res) => {
         task.status = "waiting for approval";
     }
 
-    // Ensure only a supervisor can approve the task
-    if (!userRole === "supervisor" && !status === "waiting for approval") {
-        if (!approvedBy) {
-            return res.status(400).json({ message: "Supervisor ID is required for approval" });
+    if (status === "approved") {
+        if (user.role !== "supervisor") {
+            return res.status(403).json({ message: "Only a supervisor can approve tasks" });
         }
-
-        // const supervisor = await User.findById(approvedBy);
-        // if (!supervisor || supervisor.role !== "supervisor") {
-        //     return res.status(403).json({ message: "Only a supervisor can approve this task" });
-        // }
-
         task.status = "approved";
-        task.approvedBy = approvedBy;
+        task.approvedBy = user._id;
+        task.approvedAt = new Date();
     }
 
-    // Invalid status update attempt
     if (!["pending", "waiting for approval", "approved", "completed"].includes(status)) {
         return res.status(400).json({ message: "Invalid status update" });
     }
@@ -120,6 +112,7 @@ export const updateTask = asyncHandler(async (req, res) => {
     await task.save();
     res.status(200).json(task);
 });
+
 
 
 
