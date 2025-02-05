@@ -110,7 +110,7 @@ export const updateTask = asyncHandler(async (req, res) => {
     }
 
     // Only a supervisor can approve the task
-    const supervisor = await User.findById(req.body.createdBy);
+    const supervisor = await User.findById(req.body.role);
     if (!supervisor || supervisor.role !== "supervisor") {
         return res.status(403).json({ message: "Only a supervisor can approve this task 1" });
     }
