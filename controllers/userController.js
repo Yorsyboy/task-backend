@@ -77,11 +77,12 @@ export const loginUser = asyncHandler(async (req, res) => {
 })
 
 
-// @desc: Get user data
+// @desc: Get all user data
 // @route: GET /api/users
-export const getMe = asyncHandler(async (req, res) => {
-    res.status(200).json(req.user);
-})  
+export const getUsers = asyncHandler(async (req, res) => {
+    const users = await User.find({}, '-email -password')
+    res.json(users)
+})
 
 
 // Generate token

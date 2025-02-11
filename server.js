@@ -13,7 +13,7 @@ import {
   deleteTask
 } from './controllers/taskController.js';
 import { protect } from './middleware/authMiddleware.js';
-import { createUser, getMe, loginUser } from './controllers/userController.js';
+import { createUser, getUsers, loginUser } from './controllers/userController.js';
 
 
 connectDB();
@@ -34,7 +34,7 @@ app.put('/api/tasks/:id', protect, updateTask);
 app.delete('/api/tasks/:id',protect, deleteTask);
 app.post('/api/users', createUser);
 app.post('/api/users/login', loginUser);
-app.get('/api/users/me', getMe);
+app.get('/api/users', getUsers);
 
 app.use(errorHandler);
 

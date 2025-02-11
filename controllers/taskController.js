@@ -7,7 +7,7 @@ import User from '../model/userModel.js'
 // @route: GET /api/tasks
 export const getAllTasks = asyncHandler(async (req, res) => {
 
-    const tasks = await Task.find({}).populate("approvedBy", "name")
+    const tasks = await Task.find({}).populate("approvedBy", "name").populate("assignedTo", "name").populate("createdBy", "name");
 
     res.status(200).json(tasks);
 })
@@ -39,9 +39,9 @@ export const getAllTasksByUser = asyncHandler(async (req, res) => {
 // @desc Create a task
 // @route: Post /api/tasks/new
 export const createTask = asyncHandler(async (req, res) => {
-    const { description } = req.body;
+    const { title, description, assignedTo, dueDate, priority, instruction } = req.body;
 
-    if (!description) {
+    if (!title || !description || !assignedTo || !dueDate || !priority) {
         res.status(400);
         throw new Error("Please fill in all fields");
     }
@@ -66,6 +66,11 @@ export const createTask = asyncHandler(async (req, res) => {
         createdBy: req.user._id,  // ✅ Use _id instead of name
         user: req.user._id,       // ✅ This field is redundant, consider removing
         userRole: req.user.role,
+        title,
+        assignedTo,
+        dueDate,
+        priority,
+        instruction
     });
 
     res.status(200).json(task);
@@ -89,23 +94,23 @@ export const updateTask = asyncHandler(async (req, res) => {
 
     const user = req.user; // Authenticated user
 
-    if (status === "waiting for approval") {
+    if (status === "Waiting for approval") {
         if (task.createdBy.toString() !== user._id.toString()) {
             return res.status(403).json({ message: "Only the task creator can request approval" });
         }
-        task.status = "waiting for approval";
+        task.status = "Waiting for approval";
     }
 
-    if (status === "approved") {
+    if (status === "Approved") {
         if (user.role !== "supervisor") {
             return res.status(403).json({ message: "Only a supervisor can approve tasks" });
         }
-        task.status = "approved";
+        task.status = "Approved";
         task.approvedBy = user._id;
         task.approvedAt = new Date();
     }
 
-    if (!["pending", "waiting for approval", "approved", "completed"].includes(status)) {
+    if (!["Pending", "Waiting for approval", "Approved", "Completed"].includes(status)) {
         return res.status(400).json({ message: "Invalid status update" });
     }
 

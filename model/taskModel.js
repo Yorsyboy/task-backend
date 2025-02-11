@@ -11,19 +11,46 @@ const taskSchema = new mongoose.Schema({
         enum: ["supervisor", "user"],
         required: true,
     },
+    title: {
+        type: String,
+        required: true,
+    },
     description: {
         type: String,
         required: true,
     },
     status: {
         type: String,
-        enum: ["pending", "waiting for approval", "approved", "completed"],
-        default: "pending",
+        enum: ["Pending", "Waiting for approval", "Approved"],
+        default: "Pending",
         required: true,
     },
     department: {
         type: String,
         required: true,
+    },
+    assignedTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+    },
+    dueDate: {
+        type: Date,
+        required: true,
+    },
+    priority: {
+        type: String,
+        enum: ["low", "medium", "high"],
+        required: true,
+    },
+    instruction: {
+        type: String,
+    },
+    progress: {
+        type: Number,
+        default: 0,
+    },
+    documents: {
+        type: [String],
     },
     createdAt: {
         type: Date,
@@ -33,6 +60,22 @@ const taskSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
     },
+});
+
+taskSchema.virtual("createdByName", {
+    ref: "User",
+    localField: "createdBy",
+    foreignField: "_id",
+    justOne: true,
+    options: { select: "name" },
+});
+
+taskSchema.virtual("assignedToName", {
+    ref: "User",
+    localField: "assignedTo",
+    foreignField: "_id",
+    justOne: true,
+    options: { select: "name" },
 });
 
 // Automatically set userRole before saving the task
