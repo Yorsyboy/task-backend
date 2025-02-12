@@ -139,7 +139,8 @@ export const updateTask = asyncHandler(async (req, res) => {
     const user = req.user; // Authenticated user
 
     if (status === "Waiting for approval") {
-        if (task.createdBy.toString() !== user._id.toString()) {
+        if (task.createdBy.toString() !== user._id.toString() &&
+            task.assignedTo.toString() !== user._id.toString()) {
             return res.status(403).json({ message: "Only the task creator can request approval" });
         }
         task.status = "Waiting for approval";
