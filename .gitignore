@@ -1,2 +1,4 @@
 node_modules
 .env
+task-tracker.json
+credentials.json

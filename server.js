@@ -14,6 +14,7 @@ import {
 } from './controllers/taskController.js';
 import { protect } from './middleware/authMiddleware.js';
 import { createUser, getUsers, loginUser } from './controllers/userController.js';
+import multer from 'multer';
 
 
 connectDB();
@@ -25,13 +26,17 @@ app.use(cors());
 dotenv.config();
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 
-app.post('/api/tasks/new', protect, createTask);
+// Set up file storage
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/tasks/new', protect, upload.array("documents", 5), createTask);
 app.get('/api/tasks', getAllTasks);
-app.get('/api/tasks/user/:id',protect, getAllTasksByUser);
+app.get('/api/tasks/user/:id', protect, getAllTasksByUser);
 app.put('/api/tasks/:id', protect, updateTask);
-app.delete('/api/tasks/:id',protect, deleteTask);
+app.delete('/api/tasks/:id', protect, deleteTask);
 app.post('/api/users', createUser);
 app.post('/api/users/login', loginUser);
 app.get('/api/users', getUsers);

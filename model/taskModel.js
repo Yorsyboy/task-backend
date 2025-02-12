@@ -49,9 +49,7 @@ const taskSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
-    documents: {
-        type: [String],
-    },
+    documents: [{ public_id: String, url: String }],
     createdAt: {
         type: Date,
         default: Date.now,

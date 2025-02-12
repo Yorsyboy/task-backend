@@ -2,6 +2,13 @@ import asyncHandler from 'express-async-handler'
 import mongoose from 'mongoose'
 import Task from '../model/taskModel.js'
 import User from '../model/userModel.js'
+import drive from "../config/googleDrive.js";
+import multer from "multer";
+import { Readable } from "stream"
+import fs from "fs"
+import { v4 as uuidv4 } from "uuid";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // @desc: Get all task
 // @route: GET /api/tasks
@@ -40,37 +47,75 @@ export const getAllTasksByUser = asyncHandler(async (req, res) => {
 // @route: Post /api/tasks/new
 export const createTask = asyncHandler(async (req, res) => {
     const { title, description, assignedTo, dueDate, priority, instruction } = req.body;
+    console.log("Files received:", req.files); // Debugging
 
     if (!title || !description || !assignedTo || !dueDate || !priority) {
         res.status(400);
         throw new Error("Please fill in all fields");
     }
 
-    // Ensure the authenticated user's ID is included in the request
     if (!req.user || !req.user._id) {
         res.status(401);
         throw new Error("User not authenticated");
     }
 
-    // Automatically get the department from the authenticated user
     const department = req.user.department;
-
     if (!department) {
         res.status(400);
         throw new Error("User department is missing");
     }
 
+    const uploadedFiles = [];
+
+    for (const file of req.files) {
+        const uniqueFileName = `${uuidv4()}-${file.originalname}`;
+
+        const fileMetadata = {
+            name: uniqueFileName,
+            parents: [process.env.GOOGLE_DRIVE_FOLDER_ID], // Google Drive folder ID
+        };
+
+        // Convert buffer to readable stream
+        const bufferStream = new Readable();
+        bufferStream.push(file.buffer);
+        bufferStream.push(null);
+
+        const media = {
+            mimeType: file.mimetype,
+            body: bufferStream, // Use buffer stream instead of raw buffer
+        };
+
+        try {
+            const response = await drive.files.create({
+                resource: fileMetadata,
+                media: media,
+                fields: "id, webViewLink, webContentLink",
+            });
+
+            uploadedFiles.push({
+                id: response.data.id,
+                url: response.data.webViewLink,
+            });
+        } catch (error) {
+            console.error("Google Drive Upload Error:", error);
+            return res.status(500).json({ message: "Error uploading file" });
+        }
+    }
+
+
+
+    // Save task with uploaded file URLs
     const task = await Task.create({
+        title,
         description,
         department,
-        createdBy: req.user._id,  // ✅ Use _id instead of name
-        user: req.user._id,       // ✅ This field is redundant, consider removing
+        createdBy: req.user._id,
         userRole: req.user.role,
-        title,
         assignedTo,
         dueDate,
         priority,
-        instruction
+        instruction,
+        documents: uploadedFiles,
     });
 
     res.status(200).json(task);
@@ -124,28 +169,43 @@ export const updateTask = asyncHandler(async (req, res) => {
 // @desc Delete a task
 // @route: DELETE /api/tasks/:id
 export const deleteTask = asyncHandler(async (req, res) => {
-    console.log("Task ID received:", req.params.id); // Debugging
+    console.log("Task ID received:", req.params.id);
 
     if (!req.params.id) {
         return res.status(400).json({ message: "Task ID is required" });
     }
 
     const task = await Task.findById(req.params.id);
-
     if (!task) {
-        res.status(404);
-        throw new Error("Task not found");
+        return res.status(404).json({ message: "Task not found" });
     }
 
     const user = await User.findById(req.user.id);
-    console.log(req.user)
-    console.log(req.body)
-
     if (!user || user.role !== "supervisor") {
-        res.status(403);
-        throw new Error("User not authorized to delete this task");
+        return res.status(403).json({ message: "User not authorized to delete this task" });
     }
 
+
+    // ✅ Delete files from Google Drive before removing the task
+    if (task.documents && task.documents.length > 0) {
+        await Promise.all(
+            task.documents.map(async (file) => {
+                if (file.id) {  // Ensure file has a Google Drive ID
+                    try {
+                        console.log("Deleting file from Google Drive:", file.id);
+                        await drive.files.delete({ fileId: file.id });
+                        console.log("Google Drive delete successful:", file.id);
+                    } catch (error) {
+                        console.error("Google Drive delete error:", error.message);
+                    }
+                }
+            })
+        );
+    } else {
+        console.log("No documents found for this task.");
+    }
+
+    // ✅ Delete task from database
     await Task.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ message: "Task deleted successfully", id: req.params.id });
