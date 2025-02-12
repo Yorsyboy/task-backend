@@ -47,7 +47,6 @@ export const getAllTasksByUser = asyncHandler(async (req, res) => {
 // @route: Post /api/tasks/new
 export const createTask = asyncHandler(async (req, res) => {
     const { title, description, assignedTo, dueDate, priority, instruction } = req.body;
-    console.log("Files received:", req.files); // Debugging
 
     if (!title || !description || !assignedTo || !dueDate || !priority) {
         res.status(400);
@@ -169,7 +168,6 @@ export const updateTask = asyncHandler(async (req, res) => {
 // @desc Delete a task
 // @route: DELETE /api/tasks/:id
 export const deleteTask = asyncHandler(async (req, res) => {
-    console.log("Task ID received:", req.params.id);
 
     if (!req.params.id) {
         return res.status(400).json({ message: "Task ID is required" });
