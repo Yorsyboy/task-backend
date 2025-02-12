@@ -4,10 +4,9 @@ import path from "path";
 
 dotenv.config();
 
-const KEYFILEPATH = path.join(process.cwd(), "task-tracker.json");
 
 const auth = new google.auth.GoogleAuth({
-    keyFile: KEYFILEPATH,
+    credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
     scopes: ["https://www.googleapis.com/auth/drive.file"],
 });
 
