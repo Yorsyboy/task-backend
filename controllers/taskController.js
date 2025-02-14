@@ -91,6 +91,17 @@ export const createTask = asyncHandler(async (req, res) => {
                 fields: "id, webViewLink, webContentLink",
             });
 
+            const fileId = response.data.id;
+
+            // Set file permissions to be publicly accessible
+            await drive.permissions.create({
+                fileId: fileId,
+                requestBody: {
+                    role: "reader",
+                    type: "anyone",
+                },
+            });
+
             uploadedFiles.push({
                 id: response.data.id,
                 url: response.data.webViewLink,
@@ -121,7 +132,6 @@ export const createTask = asyncHandler(async (req, res) => {
 });
 
 
-// @desc Update a task
 // @route: PUT /api/tasks/:id
 export const updateTask = asyncHandler(async (req, res) => {
     const { id } = req.params;
