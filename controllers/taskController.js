@@ -190,7 +190,7 @@ export const deleteTask = asyncHandler(async (req, res) => {
     }
 
     const user = await User.findById(req.user.id);
-    if (!user || user.role !== "supervisor") {
+    if (!user || (user.role !== "supervisor" && user._id.toString() !== task.createdBy.toString())) {
         return res.status(403).json({ message: "User not authorized to delete this task" });
     }
 
