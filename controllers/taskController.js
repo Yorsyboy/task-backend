@@ -13,14 +13,15 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Configure Nodemailer with IMAP SMTP settings
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST, // e.g., smtp.your-imap-provider.com
-    port: process.env.SMTP_PORT || 465, // 587 for TLS, 465 for SSL
-    secure: true, // True for SSL, false for TLS
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    secure: process.env.SMTP_PORT == 465, // SSL: true for port 465, false for 587
     auth: {
-        user: process.env.EMAIL_USER, // Your IMAP email
-        pass: process.env.EMAIL_PASS, // App password or email password
+        user: process.env.EMAIL_USER, // Ensure it's not empty
+        pass: process.env.EMAIL_PASS, // Ensure it's not empty
     },
 });
+
 
 // @desc: Get all task
 // @route: GET /api/tasks
@@ -169,6 +170,9 @@ export const createTask = asyncHandler(async (req, res) => {
         res.status(201).json(task);
     } catch (error) {
         console.error("Task Creation Error:", error);
+        console.log("SMTP Host:", process.env.SMTP_HOST);
+        console.log("SMTP User:", process.env.EMAIL_USER ? "Loaded" : "MISSING");
+        console.log("SMTP Pass:", process.env.EMAIL_PASS ? "Loaded" : "MISSING");
         res.status(500).json({ message: "Error creating task" });
     }
 
