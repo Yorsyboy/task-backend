@@ -5,10 +5,22 @@ import User from '../model/userModel.js'
 import drive from "../config/googleDrive.js";
 import multer from "multer";
 import { Readable } from "stream"
+import nodemailer from "nodemailer";
 import fs from "fs"
 import { v4 as uuidv4 } from "uuid";
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Configure Nodemailer with IMAP SMTP settings
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST, // e.g., smtp.your-imap-provider.com
+    port: process.env.SMTP_PORT || 465, // 587 for TLS, 465 for SSL
+    secure: true, // True for SSL, false for TLS
+    auth: {
+        user: process.env.EMAIL_USER, // Your IMAP email
+        pass: process.env.EMAIL_PASS, // App password or email password
+    },
+});
 
 // @desc: Get all task
 // @route: GET /api/tasks
@@ -112,23 +124,54 @@ export const createTask = asyncHandler(async (req, res) => {
         }
     }
 
+    try {
+        // Save task with uploaded file URLs
+        const task = await Task.create({
+            title,
+            description,
+            department,
+            createdBy: req.user._id,
+            userRole: req.user.role,
+            assignedTo,
+            dueDate,
+            priority,
+            instruction,
+            documents: uploadedFiles,
+        });
 
+        // Find the assigned user's email
+        const assignedUser = await User.findById(assignedTo);
+        if (!assignedUser) {
+            return res.status(404).json({ message: "Assigned user not found" });
+        }
 
-    // Save task with uploaded file URLs
-    const task = await Task.create({
-        title,
-        description,
-        department,
-        createdBy: req.user._id,
-        userRole: req.user.role,
-        assignedTo,
-        dueDate,
-        priority,
-        instruction,
-        documents: uploadedFiles,
-    });
+        // Send email notification
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: assignedUser.email, // User's email
+            subject: `New Task Assigned: ${title}`,
+            html: `
+                <p>Hello ${assignedUser.name},</p>
+                <p>You have been assigned a new task:</p>
+                <ul>
+                    <li><strong>Title:</strong> ${title}</li>
+                    <li><strong>Description:</strong> ${description}</li>
+                    <li><strong>Due Date:</strong> ${dueDate}</li>
+                    <li><strong>Priority:</strong> ${priority}</li>
+                </ul>
+                <p>Please log in to your account to check the full details.</p>
+                <p>Best Regards,<br/>Task Management Team</p>
+            `,
+        };
 
-    res.status(200).json(task);
+        await transporter.sendMail(mailOptions);
+
+        res.status(201).json(task);
+    } catch (error) {
+        console.error("Task Creation Error:", error);
+        res.status(500).json({ message: "Error creating task" });
+    }
+
 });
 
 
