@@ -15,10 +15,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
-    secure: process.env.SMTP_PORT == 465, // SSL: true for port 465, false for 587
+    secure: process.env.SMTP_PORT == 465,
     auth: {
-        user: process.env.EMAIL_USER, // Ensure it's not empty
-        pass: process.env.EMAIL_PASS, // Ensure it's not empty
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
     },
 });
 
@@ -160,8 +160,8 @@ export const createTask = asyncHandler(async (req, res) => {
                     <li><strong>Due Date:</strong> ${dueDate}</li>
                     <li><strong>Priority:</strong> ${priority}</li>
                 </ul>
-                <p>Please log in to your account to check the full details.</p>
-                <p>Best Regards,<br/>Task Management Team</p>
+                <p>Please log on to https://betaplus-tasktracker.vercel.app/ to check the full details.</p>
+                <p>Best Regards,<br/>Management Team</p>
             `,
         };
 
@@ -170,9 +170,6 @@ export const createTask = asyncHandler(async (req, res) => {
         res.status(201).json(task);
     } catch (error) {
         console.error("Task Creation Error:", error);
-        console.log("SMTP Host:", process.env.SMTP_HOST);
-        console.log("SMTP User:", process.env.EMAIL_USER ? "Loaded" : "MISSING");
-        console.log("SMTP Pass:", process.env.EMAIL_PASS ? "Loaded" : "MISSING");
         res.status(500).json({ message: "Error creating task" });
     }
 
